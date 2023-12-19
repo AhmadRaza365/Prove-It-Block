@@ -42,7 +42,7 @@ export default function VerificationStatus() {
   return (
     <>
       <Header />
-      {loading ? (
+      {loading || !product ? (
         <section className="w-full h-[60vh] flex justify-center items-center">
           <Spinner className="h-10 w-10" />
         </section>

@@ -36,7 +36,7 @@ export default function Verify() {
             }}
             className="w-full max-w-lg mx-auto"
           />
-          <p>{data}</p>
+          <a className="text-lg text-green-600 underline underline-offset-4" href={data} target="_blank" rel="noreferrer">{data}</a>
         </section>
       </main>
     </>
