@@ -11,9 +11,8 @@ function Header({ isDashboard = false }: Props) {
 
   return (
     <header
-      className={`sticky top-0 z-20 bg-black text-white py-3.5 flex items-center justify-between shadow-lg ${
-        isDashboard ? "px-20" : "px-20 2xl:px-32"
-      }`}
+      className={`sticky top-0 z-20 bg-black text-white py-3.5 flex items-center justify-between shadow-lg ${isDashboard ? "px-20" : "px-20 2xl:px-32"
+        }`}
     >
       <Link to="/" className="text-3xl font-bold italic text-white">
         ProveItBlock
@@ -23,7 +22,7 @@ function Header({ isDashboard = false }: Props) {
         <Link to="/verify" className="text-xl font-normal text-white">
           Verify Product
         </Link>
-        <Button
+        {!isDashboard && (<Button
           placeholder="Login"
           variant="filled"
           className="bg-secondary text-black"
@@ -33,6 +32,7 @@ function Header({ isDashboard = false }: Props) {
         >
           Login
         </Button>
+        )}
       </section>
     </header>
   );
