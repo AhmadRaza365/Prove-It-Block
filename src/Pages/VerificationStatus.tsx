@@ -66,11 +66,9 @@ export default function VerificationStatus() {
 
   const fetchBrandDetails = async (BrandId: string) => {
     try {
-      console.log(BrandId);
       const res = await GetBrandProfileById(BrandId.toLowerCase());
 
       if (res.result === "success") {
-        console.log(res);
         setBrandDetails(res.data);
       } else {
         toast.error(res.message ?? "Something went wrong. Try again later!");
