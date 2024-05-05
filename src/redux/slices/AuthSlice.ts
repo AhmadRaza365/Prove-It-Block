@@ -1,21 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 interface AuthState {
-  token: string | null;
-  email: string | null;
-  fullName: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  phoneNumber: string | number | null;
+  metaMaskAddress: string | null;
 }
 
 const initialState: AuthState = {
-  token: null,
-  email: null,
-  fullName: null,
-  firstName: null,
-  lastName: null,
-  phoneNumber: null,
+  metaMaskAddress: null,
 };
 
 const authSlice = createSlice({
@@ -23,16 +13,14 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
-      state.token = null;
-      state.email = null;
-      state.fullName = null;
-      state.firstName = null;
-      state.lastName = null;
-      state.phoneNumber = null;
+      state.metaMaskAddress = null;
+    },
+    login: (state, action) => {
+      state.metaMaskAddress = action.payload.metaMaskAddress;
     },
   },
 });
 
 export type { AuthState };
-export const { logout } = authSlice.actions;
+export const { logout, login } = authSlice.actions;
 export default authSlice.reducer;

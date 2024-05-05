@@ -1,55 +1,42 @@
 import React, { useState } from "react";
 import DashboardLayout from "../../Components/DashboardLayout";
 import { Button, Input, Typography } from "@material-tailwind/react";
-import { AddNewProduct } from "../../utils/firebase";
 import { v4 as uuidv4 } from "uuid";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
+import { contract } from "../../utils/web3Provider";
+import { useSelector } from "react-redux";
 
-type props = {
-  user: {
-    authProvider: string;
-    email: string;
-    fullName: string;
-    profilePic: string;
-    uid: string;
-  };
-};
+export default function AddProduct() {
+  // const navigate = useNavigate();
 
-export default function AddProduct({ user }: props) {
-  const navigate = useNavigate();
+  const { metaMaskAddress } = useSelector((state: any) => state.auth);
+
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
   const [image, setImage] = useState("");
 
   const [addingProduct, setAddingProduct] = useState(false);
 
-  const addNewProductToDB = async () => {
+  const addNewProductToBlockchain = async () => {
     setAddingProduct(true);
-    const uuid = uuidv4();
+    try {
+      const uuid = uuidv4();
 
-    const res = await AddNewProduct({
-      id: uuid,
-      name: name,
-      sku: sku,
-      image: image,
-      createdAt: new Date().toISOString(),
-      status: "New",
-      activity: [
-        {
-          name: `Product Listed by ${user.fullName}`,
-          date: new Date().toISOString(),
-          description: "",
-          isPublic: true,
-        },
-      ],
-    });
-    setAddingProduct(false);
-    if (res.result === "success") {
-      toast.success(res.message);
-      navigate(`/dashboard/product/${uuid}`);
-    } else {
-      toast.error(res.message);
+      await contract.methods
+        .createProduct(uuid, name, sku, image, new Date().toISOString())
+        .send({
+          from: metaMaskAddress,
+        });
+
+      setAddingProduct(false);
+      toast.success("Product Added Successfully");
+      setName("");
+      setSku("");
+      setImage("");
+    } catch (error) {
+      setAddingProduct(false);
+      toast.error("Failed to add product");
     }
   };
 
@@ -63,7 +50,7 @@ export default function AddProduct({ user }: props) {
         className="mt-5 p-2 flex flex-col gap-y-4 max-w-2xl mx-auto"
         onSubmit={(e) => {
           e.preventDefault();
-          addNewProductToDB();
+          addNewProductToBlockchain();
         }}
       >
         <Input
@@ -101,10 +88,6 @@ export default function AddProduct({ user }: props) {
             }}
             required
           />
-
-          {/* <Button placeholder="" size="md" className="w-44" variant="gradient">
-            Upload New
-          </Button> */}
         </section>
         <section className="flex items-center justify-center gap-x-4 pt-3">
           <Button
@@ -125,7 +108,7 @@ export default function AddProduct({ user }: props) {
             type="submit"
             disabled={addingProduct}
           >
-            Add Product
+            {addingProduct ? "Adding Product..." : "Add Product"}
           </Button>
         </section>
       </form>

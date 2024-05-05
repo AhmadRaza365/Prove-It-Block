@@ -36,14 +36,7 @@ const authPersistConfig = {
   key: "auth",
   version: 1,
   storage,
-  whitelist: [
-    "token",
-    "email",
-    "fullName",
-    "firstName",
-    "lastName",
-    "phoneNumber",
-  ],
+  whitelist: [],
 };
 
 const persistedReducer = combineReducers({
