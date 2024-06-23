@@ -16,11 +16,14 @@ export default function Verify() {
             Scan QR Code to verify Product
           </Typography>
           <QrReader
+            scanDelay={300}
             onResult={(result: any, error) => {
               if (!!result) {
                 setData(result?.text);
                 if (result?.text?.includes("http")) {
                   window.open(result?.text);
+                } else {
+                  window.alert("Some unknown data source is scanned");
                 }
               }
 
@@ -36,7 +39,14 @@ export default function Verify() {
             }}
             className="w-full max-w-lg mx-auto"
           />
-          <a className="text-lg text-green-600 underline underline-offset-4" href={data} target="_blank" rel="noreferrer">{data}</a>
+          <a
+            className="text-lg text-green-600 underline underline-offset-4"
+            href={data}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {data}
+          </a>
         </section>
       </main>
     </>
