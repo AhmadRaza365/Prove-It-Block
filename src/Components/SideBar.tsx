@@ -2,7 +2,7 @@ import { ListItem } from "@material-tailwind/react";
 import React from "react";
 import { BsBoxSeamFill } from "react-icons/bs";
 import { MdAddBox, MdDashboard } from "react-icons/md";
-import { IoLogOut, IoSettingsSharp } from "react-icons/io5";
+import { IoStorefrontSharp } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 
 type Props = {
@@ -29,9 +29,9 @@ export default function SideBar({ activePage }: Props) {
       icon: <MdAddBox size={22} />,
     },
     {
-      name: "Settings",
-      link: "/dashboard/settings",
-      icon: <IoSettingsSharp size={22} />,
+      name: "Brand Profile",
+      link: "/dashboard/brand-profile",
+      icon: <IoStorefrontSharp size={22} />,
     },
   ];
 
@@ -43,12 +43,13 @@ export default function SideBar({ activePage }: Props) {
             placeholder=""
             key={index}
             selected={page.name === activePage}
-            className={`py-4 mt-2 first:mt-0 text-black flex items-center gap-x-2 ${page.name === activePage
-              ? "mb-3 border border-black bg-secondary hover:bg-secondary active:bg-secondary focus:bg-secondary shadow-[3px_3px_0_black]"
-              : "mb-2"
-              }`}
+            className={`py-4 mt-2 first:mt-0 text-black flex items-center gap-x-2 ${
+              page.name === activePage
+                ? "mb-3 border border-black bg-secondary hover:bg-secondary active:bg-secondary focus:bg-secondary shadow-[3px_3px_0_black]"
+                : "mb-2"
+            }`}
             onClick={() => {
-              navigate(page.link)
+              navigate(page.link);
             }}
           >
             {page.icon}
@@ -56,14 +57,6 @@ export default function SideBar({ activePage }: Props) {
           </ListItem>
         );
       })}
-
-      <ListItem
-        placeholder=""
-        className={`py-4 mt-2 text-black flex items-center gap-x-2 mb-2`}
-      >
-        <IoLogOut size={22} className="rotate-180" />
-        Logout
-      </ListItem>
     </section>
   );
 }

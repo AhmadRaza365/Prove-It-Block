@@ -6,86 +6,34 @@ import { useNavigate } from "react-router-dom";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import DataTable from "react-data-table-component";
 import { FormateDate } from "../../utils/FormatDate";
-import { GetProductsByUserId } from "../../utils/firebase";
 import toast from "react-hot-toast";
+import { contract } from "../../utils/web3Provider";
+import { useSelector } from "react-redux";
 
-type props = {
-  user: {
-    authProvider: string
-    email: string;
-    fullName: string;
-    profilePic: string;
-    uid: string;
-  }
-}
-
-export default function Products({ user }: props) {
+export default function Products() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState<any>(null);
-  const [products, setProducts] = useState<any>([
-    {
-      id: "123",
-      sku: "sku-123",
-      name: "ABC",
-      createdAt: "12-12-2023",
-      status: "New",
-    },
-    {
-      id: "123",
-      sku: "sku-123",
-      name: "ABC",
-      createdAt: "12-12-2023",
-      status: "New",
-    },
-    {
-      id: "123",
-      sku: "sku-123",
-      name: "ABC",
-      createdAt: "12-12-2023",
-      status: "New",
-    },
-    {
-      id: "123",
-      sku: "sku-123",
-      name: "ABC",
-      createdAt: "12-12-2023",
-      status: "New",
-    },
-  ]);
 
-  const getUserProducts = async () => {
-    setLoading(true);
-    const res = await GetProductsByUserId(user.uid);
-    
-    setLoading(false);
-    if (res.result === "success") {
-      setProducts(res.products);
-    } else {
-      toast.error(res.message);
-    }
-  }
+  const { metaMaskAddress } = useSelector((state: any) => state.auth);
+
+  const [loading, setLoading] = useState<any>(null);
+  const [products, setProducts] = useState<any>([]);
 
   const productsColumns = [
-    {
-      name: "Product Id",
-      cell: (row: any) => (
-        <p
-          className="flex items-center gap-x-1.5 font-[600] text-smoky-black font-gtAmericaLight"
-          onClick={() => navigate(`/order/${row?.orderShortCode}`)}
-        >
-          {row?.id}
-        </p>
-      ),
-      minWidth: "100px",
-    },
     {
       name: (
         <span className="border-l pl-2 border-[#D1D1D1]">Product Name</span>
       ),
       cell: (row: any) => (
-        <span className="pl-2.5 font-[600] text-smoky-black font-gtAmericaLight">
-          {row?.name}
-        </span>
+        <div className="flex items-center gap-x-1">
+          <img
+            src={row?.image}
+            className="w-10 h-10 rounded-md"
+            alt={row?.name}
+          />
+          <span className="pl-2.5 font-[600] text-smoky-black font-gtAmericaLight">
+            {row?.name}
+          </span>
+        </div>
       ),
       minWidth: "126px",
       grow: 2,
@@ -112,7 +60,7 @@ export default function Products({ user }: props) {
       name: <span className="border-l pl-2 border-[#D1D1D1]">Status</span>,
       cell: (row: any) => (
         <span className="pl-2.5 font-[600] text-smoky-black font-gtAmericaLight">
-          {row.status}
+          {row.purchased ? "Sold" : "Available"}
         </span>
       ),
       minWidth: "126px",
@@ -123,6 +71,7 @@ export default function Products({ user }: props) {
     table: {
       style: {
         overflow: "scroll",
+        paddingBottom: "50px",
       },
     },
     rows: {
@@ -143,15 +92,59 @@ export default function Products({ user }: props) {
         border: "none",
         fontSize: "13px",
         color: "#605F5F",
+        paddingTop: "10px",
+        paddingBottom: "10px",
       },
     },
   };
 
-  useEffect(() => {
-    getUserProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const fetchProductsOfUser = async () => {
+    setLoading(true);
+    try {
+      const res: any = await contract.methods
+        .getAllProductsByOwner(metaMaskAddress)
+        .call();
 
+      const res2: any = await getProductsDetails(res);
+
+      setProducts(res2);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      toast.error("Failed to fetch products");
+    }
+  };
+
+  const getProductsDetails = async (products: string[]) => {
+    var productsDetails: any[] = [];
+
+    for (let i = 0; i < products.length; i++) {
+      const res: any = await contract.methods
+        .getProductByUniqueId(products[i])
+        .call();
+
+      const formattedData = {
+        id: res[0],
+        uniqueId: res[1],
+        name: res[2],
+        sku: res[3],
+        owner: res[4],
+        image: res[5],
+        createdAt: res[6],
+        purchased: res[7],
+        purchasedBy: res[8],
+      };
+
+      productsDetails.push(formattedData);
+    }
+
+    return productsDetails;
+  };
+
+  useEffect(() => {
+    fetchProductsOfUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <DashboardLayout pageName="Products">
@@ -211,7 +204,9 @@ export default function Products({ user }: props) {
           }
           highlightOnHover
           pointerOnHover
-          onRowClicked={(row: any) => navigate(`/dashboard/product/${row?.id}`)}
+          onRowClicked={(row: any) =>
+            navigate(`/dashboard/product/${row?.uniqueId}`)
+          }
           pagination
         />
       </section>

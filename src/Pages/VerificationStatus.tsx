@@ -1,35 +1,80 @@
 import React, { useEffect, useState } from "react";
 import Header from "../Components/Header";
-import {
-  Spinner,
-  Timeline,
-  TimelineBody,
-  TimelineConnector,
-  TimelineHeader,
-  TimelineIcon,
-  TimelineItem,
-  Typography,
-} from "@material-tailwind/react";
+import { Spinner, Typography } from "@material-tailwind/react";
 import { FormateDate } from "../utils/FormatDate";
-import { useParams } from "react-router-dom";
-import { GetProductByID } from "../utils/firebase";
+import { useNavigate, useParams } from "react-router-dom";
+import { GetBrandProfileById } from "../utils/firebase";
 import toast from "react-hot-toast";
+import { contract } from "../utils/web3Provider";
+import ImagePlaceholder from "../Images/image-placeholder.avif";
 
 export default function VerificationStatus() {
   const pathName = useParams();
+  const navigate = useNavigate();
+
   const [product, setProduct] = useState<any>(null);
+  const [brandDetails, setBrandDetails] = useState<any>({
+    brandName: "",
+    supportEmail: "",
+    phoneNumber: "",
+    address: "",
+    officialWebsite: "",
+    logo: "",
+  });
+
   const [loading, setLoading] = useState(false);
 
   const fetchProductDetails = async (id: string) => {
     setLoading(true);
-    const res = await GetProductByID(id);
 
-    setLoading(false);
-    if (res.result === "success") {
-      setProduct(res.product);
-    } else {
-      setProduct(null);
-      toast.error(res.message);
+    try {
+      const res: any = await contract.methods.getProductByUniqueId(id).call();
+
+      if (
+        res[1] === "" &&
+        res[2] === "" &&
+        res[4] === "0x0000000000000000000000000000000000000000"
+      ) {
+        setLoading(false);
+        setProduct(null);
+        toast.error("Product not found!");
+        navigate("/verify");
+        return;
+      }
+
+      const formattedData = {
+        id: res[0],
+        uniqueId: res[1],
+        name: res[2],
+        sku: res[3],
+        owner: res[4],
+        image: res[5],
+        createdAt: res[6],
+        purchased: res[7],
+        purchasedBy: res[8],
+      };
+
+      setProduct(formattedData);
+
+      await fetchBrandDetails(res[4]);
+
+      setLoading(false);
+    } catch (error) {
+      toast.error("Failed to fetch product details. Please try again.");
+    }
+  };
+
+  const fetchBrandDetails = async (BrandId: string) => {
+    try {
+      const res = await GetBrandProfileById(BrandId.toLowerCase());
+
+      if (res.result === "success") {
+        setBrandDetails(res.data);
+      } else {
+        toast.error(res.message ?? "Something went wrong. Try again later!");
+      }
+    } catch (error: any) {
+      toast.error(error.message ?? "Something went wrong. Try again later!");
     }
   };
 
@@ -37,6 +82,7 @@ export default function VerificationStatus() {
     if (pathName?.id) {
       fetchProductDetails(pathName?.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathName]);
 
   return (
@@ -48,7 +94,7 @@ export default function VerificationStatus() {
         </section>
       ) : (
         <main className="w-full px-20 2xl:px-32 py-12">
-          {product?.status.toLowerCase() === "new" && (
+          {!product?.purchased && (
             <Typography
               placeholder=""
               variant="h2"
@@ -58,35 +104,43 @@ export default function VerificationStatus() {
               Product is Brand New. You can purchase it.
             </Typography>
           )}
-          {product?.status.toLowerCase() === "sold" && (
+          {product?.purchased && (
             <Typography
               placeholder=""
               variant="h2"
               color="red"
               className="text-center"
             >
-              Product is already sold out. Don't purchase it.
+              Product is already sold out.
             </Typography>
           )}
           <section className="h-fit border-b border-black/20 pt-5 pl-5 pb-4">
             <Typography placeholder="" variant="h4" className="">
               Product Details
             </Typography>
-            <section className="flex items-center gap-x-5 mt-2">
-              <section className="relative w-20 aspect-square border-2 border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+            <section className="flex items-start gap-x-5 mt-2">
+              <section className="relative w-56 aspect-square border-2 border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
                 <img
-                  src={product?.image}
+                  src={product?.image ?? ImagePlaceholder}
                   alt="Product"
                   className="absolute w-full h-full object-cover object-center"
+                  onError={(e: any) => {
+                    e.target.onerror = null;
+                    e.target.src = ImagePlaceholder;
+                  }}
                 />
               </section>
-              <section>
+              <section className="flex flex-col gap-y-1.5">
                 <div className="flex items-baseline gap-x-2">
-                  <Typography
-                    placeholder=""
-                    variant="paragraph"
-                    className="font-bold"
-                  >
+                  <Typography placeholder="" variant="h5">
+                    ID:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {product?.uniqueId}
+                  </Typography>
+                </div>
+                <div className="flex items-baseline gap-x-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
                     Name:
                   </Typography>
                   <Typography placeholder="" variant="paragraph" className="">
@@ -94,69 +148,104 @@ export default function VerificationStatus() {
                   </Typography>
                 </div>
                 <div className="flex items-baseline gap-x-2 mt-2">
-                  <Typography
-                    placeholder=""
-                    variant="paragraph"
-                    className="font-bold"
-                  >
+                  <Typography placeholder="" variant="h5" className="font-bold">
                     SKU:
                   </Typography>
                   <Typography placeholder="" variant="paragraph" className="">
                     {product?.sku}
                   </Typography>
                 </div>
+                <div className="flex items-baseline gap-x-2 mt-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
+                    Created At:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {product?.createdAt
+                      ? FormateDate(product?.createdAt, "MMM DD, YYYY")
+                      : ""}
+                  </Typography>
+                </div>
+                {product?.purchased && (
+                  <div className="flex items-baseline gap-x-2 mt-2">
+                    <Typography
+                      placeholder=""
+                      variant="h5"
+                      className="font-bold"
+                    >
+                      Purchased By:
+                    </Typography>
+                    <Typography placeholder="" variant="paragraph" className="">
+                      {product?.purchasedBy ?? ""}
+                    </Typography>
+                  </div>
+                )}
               </section>
             </section>
           </section>
-          <section className="w-[32rem] mt-5 pl-5">
+          <section className="mt-5 pl-5">
             <Typography
               placeholder=""
               variant="h4"
               color="blue-gray"
               className="leading-none mb-6"
             >
-              Activity Timeline
+              Brand Details
             </Typography>
-            <Timeline>
-              {product?.activity
-                .filter((step: any) => step?.isPublic)
-                .map((step: any, index: number) => {
-                  return (
-                    <TimelineItem key={index}>
-                      <TimelineConnector />
-                      <TimelineHeader className="h-3">
-                        <TimelineIcon />
-                        <Typography
-                          placeholder=""
-                          variant="h6"
-                          color="blue-gray"
-                          className="leading-none"
-                        >
-                          {step?.name}
-                        </Typography>
-                      </TimelineHeader>
-                      <TimelineBody className="pb-8">
-                        <Typography
-                          placeholder=""
-                          variant="small"
-                          color="blue-gray"
-                          className="leading-none mb-2"
-                        >
-                          {FormateDate(step?.date, "MMM DD, YYYY")}
-                        </Typography>
-                        <Typography
-                          placeholder=""
-                          variant="small"
-                          color="gray"
-                          className="font-normal text-gray-600"
-                        >
-                          {step?.description}
-                        </Typography>
-                      </TimelineBody>
-                    </TimelineItem>
-                  );
-                })}
-            </Timeline>
+            <section className="flex items-start gap-x-5 mt-2">
+              <section className="relative w-56 aspect-square border-2 border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+                <img
+                  src={brandDetails?.logo ?? ImagePlaceholder}
+                  alt="Product"
+                  className="absolute w-full h-full object-cover object-center"
+                  onError={(e: any) => {
+                    e.target.onerror = null;
+                    e.target.src = ImagePlaceholder;
+                  }}
+                />
+              </section>
+              <section className="flex flex-col gap-y-1.5">
+                <div className="flex items-baseline gap-x-2">
+                  <Typography placeholder="" variant="h5">
+                    Brand Name:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {brandDetails?.brandName ?? ""}
+                  </Typography>
+                </div>
+                <div className="flex items-baseline gap-x-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
+                    Support Email:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {brandDetails?.supportEmail ?? ""}
+                  </Typography>
+                </div>
+                <div className="flex items-baseline gap-x-2 mt-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
+                    Phone Number:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {brandDetails?.phoneNumber ?? ""}
+                  </Typography>
+                </div>
+                <div className="flex items-baseline gap-x-2 mt-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
+                    Address:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {brandDetails?.address ?? ""}
+                  </Typography>
+                </div>
+                <div className="flex items-baseline gap-x-2 mt-2">
+                  <Typography placeholder="" variant="h5" className="font-bold">
+                    Official Website:
+                  </Typography>
+                  <Typography placeholder="" variant="paragraph" className="">
+                    {brandDetails?.officialWebsite ?? ""}
+                  </Typography>
+                </div>
+              </section>
+            </section>
           </section>
         </main>
       )}

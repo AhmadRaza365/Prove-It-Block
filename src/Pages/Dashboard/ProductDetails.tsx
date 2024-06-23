@@ -6,34 +6,22 @@ import {
   DialogBody,
   Input,
   Spinner,
-  Timeline,
-  TimelineBody,
-  TimelineConnector,
-  TimelineHeader,
-  TimelineIcon,
-  TimelineItem,
   Typography,
 } from "@material-tailwind/react";
 import { GoArrowLeft } from "react-icons/go";
 import { FiDownload } from "react-icons/fi";
 import { FormateDate } from "../../utils/FormatDate";
 import { QRCode } from "react-qrcode-logo";
-import { GetProductByID, UpdateProductData } from "../../utils/firebase";
 import toast from "react-hot-toast";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { contract } from "../../utils/web3Provider";
+import { useSelector } from "react-redux";
+import ImagePlaceholder from "../../Images/image-placeholder.avif";
 
-type props = {
-  user: {
-    authProvider: string;
-    email: string;
-    fullName: string;
-    profilePic: string;
-    uid: string;
-  };
-};
-
-function ProductDetails({ user }: props) {
+function ProductDetails() {
   const pathName = useParams();
+  const navigate = useNavigate();
+  const { metaMaskAddress } = useSelector((state: any) => state.auth);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -45,39 +33,62 @@ function ProductDetails({ user }: props) {
 
   const fetchProductDetails = async (id: string) => {
     setLoading(true);
-    const res = await GetProductByID(id);
+    try {
+      const res: any = await contract.methods.getProductByUniqueId(id).call();
 
-    setLoading(false);
-    if (res.result === "success") {
-      setProduct(res.product);
-    } else {
+      if (
+        res[1] === "" &&
+        res[2] === "" &&
+        res[4] === "0x0000000000000000000000000000000000000000"
+      ) {
+        setLoading(false);
+        setProduct(null);
+        toast.error("Product not found!");
+        navigate("/dashboard/products");
+        return;
+      }
+
+      const formattedData = {
+        id: res[0],
+        uniqueId: res[1],
+        name: res[2],
+        sku: res[3],
+        owner: res[4],
+        image: res[5],
+        createdAt: res[6],
+        purchased: res[7],
+        purchasedBy: res[8],
+      };
+
+      setProduct(formattedData);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
       setProduct(null);
-      toast.error(res.message);
+      toast.error("Failed to fetch product details!");
     }
   };
 
   const markAsSold = async () => {
     if (customerName) {
       setIsUpdating(true);
-      const newActivity = [
-        ...product?.activity,
-        {
-          name: `Product Sold to ${customerName}`,
-          date: new Date().toISOString(),
-          description: "Product sold to the customer",
-          isPublic: true,
-        },
-      ];
 
-      const res = await UpdateProductData(product?.id, "Sold", newActivity);
+      try {
+        await contract.methods
+          .purchaseProduct(parseInt(product.id), customerName)
+          .send({
+            from: metaMaskAddress,
+          });
 
-      setIsUpdating(false);
-      if (res.result === "success") {
+        setIsUpdating(false);
         toast.success("Product marked as sold!");
         setOpen(false);
-        fetchProductDetails(pathName?.id ?? "")
-      } else if (res.result === "error") {
-        toast.error(res.message);
+        setCustomerName("");
+        fetchProductDetails(pathName?.id ?? "");
+      } catch (error) {
+        setIsUpdating(false);
+        toast.error("Failed to mark product as sold!");
+        return;
       }
     } else {
       toast.error("Enter Customer Name!");
@@ -88,6 +99,7 @@ function ProductDetails({ user }: props) {
     if (pathName?.id) {
       fetchProductDetails(pathName?.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathName]);
 
   return (
@@ -114,20 +126,28 @@ function ProductDetails({ user }: props) {
             <Typography placeholder="" variant="h2" className="">
               {product?.name}
             </Typography>
-            <div className="ml-3 -mb-1 bg-primary/10 text-primary font-bold px-6 py-2 rounded-full text-sm">
-              {product?.status}
-            </div>
-            <Button
-              placeholder=""
-              color="pink"
-              variant="filled"
-              className="bg-primary ml-auto"
-              onClick={() => {
-                setOpen(true);
-              }}
-            >
-              Mark As Sold
-            </Button>
+            {product?.purchased ? (
+              <div className="ml-3 bg-primary/10 text-primary font-bold px-6 py-2 rounded-full text-sm">
+                Sold Out
+              </div>
+            ) : (
+              <div className="ml-3 bg-green-500/10 text-green-500 font-bold px-6 py-2 rounded-full text-sm">
+                Available
+              </div>
+            )}
+            {!product?.purchased && (
+              <Button
+                placeholder=""
+                color="pink"
+                variant="filled"
+                className="bg-primary ml-auto"
+                onClick={() => {
+                  setOpen(true);
+                }}
+              >
+                Mark As Sold
+              </Button>
+            )}
           </section>
           <section className="grid grid-cols-12 gap-5">
             <section className="col-span-8">
@@ -135,21 +155,21 @@ function ProductDetails({ user }: props) {
                 <Typography placeholder="" variant="h4" className="">
                   Product Details
                 </Typography>
-                <section className="flex items-center gap-x-5 mt-2">
-                  <section className="relative w-28 aspect-square border-2 border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
+                <section className="flex items-start gap-x-5 mt-2">
+                  <section className="relative w-56 aspect-square border-2 border-black rounded-lg overflow-hidden shadow-[3px_3px_0_black]">
                     <img
-                      src={product?.image}
+                      src={product?.image ?? ImagePlaceholder}
                       alt="Product"
                       className="absolute w-full h-full object-cover object-center"
+                      onError={(e: any) => {
+                        e.target.onerror = null;
+                        e.target.src = ImagePlaceholder;
+                      }}
                     />
                   </section>
-                  <section>
+                  <section className="flex flex-col gap-y-1.5">
                     <div className="flex items-baseline gap-x-2">
-                      <Typography
-                        placeholder=""
-                        variant="paragraph"
-                        className="font-bold"
-                      >
+                      <Typography placeholder="" variant="h5">
                         ID:
                       </Typography>
                       <Typography
@@ -157,13 +177,29 @@ function ProductDetails({ user }: props) {
                         variant="paragraph"
                         className=""
                       >
-                        {product?.id}
+                        {product?.uniqueId}
+                      </Typography>
+                    </div>
+                    <div className="flex items-baseline gap-x-2">
+                      <Typography
+                        placeholder=""
+                        variant="h5"
+                        className="font-bold"
+                      >
+                        Name:
+                      </Typography>
+                      <Typography
+                        placeholder=""
+                        variant="paragraph"
+                        className=""
+                      >
+                        {product?.name}
                       </Typography>
                     </div>
                     <div className="flex items-baseline gap-x-2 mt-2">
                       <Typography
                         placeholder=""
-                        variant="paragraph"
+                        variant="h5"
                         className="font-bold"
                       >
                         SKU:
@@ -179,70 +215,41 @@ function ProductDetails({ user }: props) {
                     <div className="flex items-baseline gap-x-2 mt-2">
                       <Typography
                         placeholder=""
-                        variant="paragraph"
+                        variant="h5"
                         className="font-bold"
                       >
-                        Date:
+                        Created At:
                       </Typography>
                       <Typography
                         placeholder=""
                         variant="paragraph"
                         className=""
                       >
-                        {FormateDate(product?.createdAt, "MMM DD, YYYY")}
+                        {product?.createdAt
+                          ? FormateDate(product?.createdAt, "MMM DD, YYYY")
+                          : ""}
                       </Typography>
                     </div>
+                    {product?.purchased && (
+                      <div className="flex items-baseline gap-x-2 mt-2">
+                        <Typography
+                          placeholder=""
+                          variant="h5"
+                          className="font-bold"
+                        >
+                          Purchased By:
+                        </Typography>
+                        <Typography
+                          placeholder=""
+                          variant="paragraph"
+                          className=""
+                        >
+                          {product?.purchasedBy ?? ""}
+                        </Typography>
+                      </div>
+                    )}
                   </section>
                 </section>
-              </section>
-
-              <section className="w-[32rem] mt-5 pl-5">
-                <Typography
-                  placeholder=""
-                  variant="h4"
-                  color="blue-gray"
-                  className="leading-none mb-6"
-                >
-                  Activity Timeline
-                </Typography>
-                <Timeline>
-                  {product?.activity.map((step: any, index: number) => {
-                    return (
-                      <TimelineItem key={index}>
-                        <TimelineConnector />
-                        <TimelineHeader className="h-3">
-                          <TimelineIcon />
-                          <Typography
-                            placeholder=""
-                            variant="h6"
-                            color="blue-gray"
-                            className="leading-none"
-                          >
-                            {step?.name}
-                          </Typography>
-                        </TimelineHeader>
-                        <TimelineBody className="pb-8">
-                          <Typography
-                            placeholder=""
-                            variant="small"
-                            color="blue-gray"
-                            className="leading-none mb-2"
-                          >
-                            {FormateDate(step?.date, "MMM DD, YYYY")}
-                          </Typography>
-                          <Typography
-                            placeholder=""
-                            variant="small"
-                            color="gray"
-                            className="font-normal text-gray-600"
-                          >
-                            {step?.description}
-                          </Typography>
-                        </TimelineBody>
-                      </TimelineItem>
-                    );
-                  })}
-                </Timeline>
               </section>
             </section>
             <section className="col-span-4 h-full min-h-[80vh] border-l border-black/20 pt-5 px-8">
@@ -253,34 +260,38 @@ function ProductDetails({ user }: props) {
               >
                 QR Code
               </Typography>
+              {product && (
+                <>
+                  <div className="w-full flex justify-center">
+                    <QRCode
+                      value={`${window.location.origin}/verify/${product?.uniqueId}`}
+                      bgColor="#fff"
+                      size={250}
+                      quietZone={20}
+                      id="product-qr-code"
+                    />
+                  </div>
 
-              <div className="w-full flex justify-center">
-                <QRCode
-                  value={`${window.location.origin}/verify/${product?.id}`}
-                  bgColor="#fff"
-                  size={250}
-                  quietZone={20}
-                  id="product-qr-code"
-                />
-              </div>
-              <Button
-                placeholder=""
-                variant="gradient"
-                size="lg"
-                className="flex items-center mx-auto mt-8"
-                onClick={() => {
-                  const canvas: any =
-                    document.getElementById("product-qr-code");
-                  var dataURL = canvas.toDataURL("image/png");
-                  var link = document.createElement("a");
-                  link.href = dataURL;
-                  link.download = "qr-code.png";
-                  link.click();
-                }}
-              >
-                <FiDownload size={18} className="-mt-1" />
-                Download QR Code
-              </Button>
+                  <Button
+                    placeholder=""
+                    variant="gradient"
+                    size="lg"
+                    className="flex items-center mx-auto mt-8"
+                    onClick={() => {
+                      const canvas: any =
+                        document.getElementById("product-qr-code");
+                      var dataURL = canvas.toDataURL("image/png");
+                      var link = document.createElement("a");
+                      link.href = dataURL;
+                      link.download = "qr-code.png";
+                      link.click();
+                    }}
+                  >
+                    <FiDownload size={18} className="-mt-1" />
+                    Download QR Code
+                  </Button>
+                </>
+              )}
             </section>
           </section>
           <Dialog placeholder="" open={open} handler={handleOpen} size="xs">

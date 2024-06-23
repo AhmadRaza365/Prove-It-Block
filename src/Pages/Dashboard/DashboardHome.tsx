@@ -1,19 +1,9 @@
-import React, { useEffect } from "react";
+import React from "react";
 import DashboardLayout from "../../Components/DashboardLayout";
 import { Button } from "@material-tailwind/react";
 import { useNavigate } from "react-router-dom";
 
-type props = {
-  user: {
-    authProvider: string
-    email: string;
-    fullName: string;
-    profilePic: string;
-    uid: string;
-  }
-}
-
-function DashboardHome({ user }: props) {
+function DashboardHome() {
   const navigate = useNavigate();
 
   return (
@@ -47,10 +37,10 @@ function DashboardHome({ user }: props) {
           color="cyan"
           variant="gradient"
           onClick={() => {
-            navigate("/dashboard/settings");
+            navigate("/dashboard/brand-profile");
           }}
         >
-          Settings
+          Brand Profile
         </Button>
       </section>
     </DashboardLayout>

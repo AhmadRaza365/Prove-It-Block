@@ -17,7 +17,6 @@ import {
   getDocs,
   doc,
   updateDoc,
-  deleteDoc,
 } from "firebase/firestore";
 import { ProductTypes } from "./types/ProductTypes";
 
@@ -294,7 +293,6 @@ const GetUserData = async (userUuid: string) => {
   }
 };
 
-
 // 1- Get Products By User Id
 const GetProductsByUserId = async (userId: string) => {
   try {
@@ -387,13 +385,8 @@ const GetProductByID = async (id: string) => {
 };
 
 // 4- Update User Role
-const UpdateProductData = async (
-  id: string,
-  status: string,
-  activity: any
-) => {
+const UpdateProductData = async (id: string, status: string, activity: any) => {
   try {
-
     const q = query(collection(db, "products"), where("id", "==", id));
 
     const docs = await getDocs(q);
@@ -408,6 +401,62 @@ const UpdateProductData = async (
     return {
       result: "success",
       message: "Product Updated Successfully",
+    };
+  } catch (err: any) {
+    return {
+      result: "error",
+      message: err.message,
+    };
+  }
+};
+
+// Get Brand Profile by Id
+const GetBrandProfileById = async (id: string) => {
+  try {
+    const q = query(collection(db, "brandProfiles"), where("id", "==", id));
+
+    const docs = await getDocs(q);
+
+    const brandProfile = docs?.docs[0]?.data();
+
+    return {
+      result: "success",
+      message: "Brand Profile fetched Successfully",
+      data: brandProfile,
+    };
+  } catch (error: any) {
+    return {
+      result: "error",
+      message: error.message || "Something went wrong",
+      data: null,
+    };
+  }
+};
+
+// Update Brand Profile by Id
+const UpdateBrandProfileById = async (id: string, data: any) => {
+  try {
+    const q = query(collection(db, "brandProfiles"), where("id", "==", id));
+
+    const docs = await getDocs(q);
+
+    // Check if the brand profile exists or not. If not then add a new brand profile
+    if (docs.empty) {
+      await addDoc(collection(db, "brandProfiles"), {
+        id: id,
+        ...data,
+      });
+    } else {
+      const ref = docs?.docs[0]?.ref;
+
+      await updateDoc(ref, {
+        ...data,
+      });
+    }
+
+    return {
+      result: "success",
+      message: "Brand Profile Updated Successfully",
     };
   } catch (err: any) {
     return {
@@ -433,5 +482,9 @@ export {
   GetProductsByUserId,
   AddNewProduct,
   GetProductByID,
-  UpdateProductData
+  UpdateProductData,
+
+  // Brand Profile
+  GetBrandProfileById,
+  UpdateBrandProfileById,
 };

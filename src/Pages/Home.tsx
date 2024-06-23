@@ -76,11 +76,10 @@ export default function Home() {
 
           <section className="mx-auto my-5 w-fit flex items-center gap-x-4">
             <button
-              className={`border-2 border-black text-xl font-normal text-black px-9 py-3 rounded-full ${
-                selectedSection === "customer"
-                  ? "bg-primary shadow-[4px_4px_0_black]"
-                  : "bg-white"
-              }`}
+              className={`border-2 border-black text-xl font-normal text-black px-9 py-3 rounded-full ${selectedSection === "customer"
+                ? "bg-primary shadow-[4px_4px_0_black]"
+                : "bg-white"
+                }`}
               onClick={() => {
                 setSelectedSection("customer");
               }}
@@ -89,11 +88,10 @@ export default function Home() {
             </button>
 
             <button
-              className={`border-2 border-black text-xl font-normal text-black px-5 py-3 rounded-full ${
-                selectedSection === "manufacturer"
-                  ? "bg-primary shadow-[4px_4px_0_black]"
-                  : "bg-white"
-              }`}
+              className={`border-2 border-black text-xl font-normal text-black px-5 py-3 rounded-full ${selectedSection === "manufacturer"
+                ? "bg-primary shadow-[4px_4px_0_black]"
+                : "bg-white"
+                }`}
               onClick={() => {
                 setSelectedSection("manufacturer");
               }}
@@ -103,11 +101,10 @@ export default function Home() {
           </section>
 
           <section
-            className={`px-20 flex flex-col items-center gap-y-24 transition-all ease-in-out duration-200 ${
-              selectedSection === "customer"
-                ? "scale-100 pt-24 h-fit"
-                : "scale-0 h-0"
-            }`}
+            className={`px-20 flex flex-col items-center gap-y-24 transition-all ease-in-out duration-200 ${selectedSection === "customer"
+              ? "scale-100 pt-24 h-fit"
+              : "scale-0 h-0"
+              }`}
           >
             {/* Step 1 */}
             <section className="relative w-fit flex items-start gap-x-5 -translate-x-44">
@@ -185,11 +182,10 @@ export default function Home() {
           </section>
 
           <section
-            className={`px-20 flex flex-col items-center gap-y-24 pt-24 transition-all ease-in-out duration-200 ${
-              selectedSection === "manufacturer"
-                ? "scale-100 pt-24 h-fit"
-                : "scale-0 h-0"
-            }`}
+            className={`px-20 flex flex-col items-center gap-y-24 pt-24 transition-all ease-in-out duration-200 ${selectedSection === "manufacturer"
+              ? "scale-100 pt-24 h-fit"
+              : "scale-0 h-0"
+              }`}
           >
             {/* Step 1 */}
             <section className="relative w-fit flex items-start gap-x-5 -translate-x-44">
